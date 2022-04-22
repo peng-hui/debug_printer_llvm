@@ -1,4 +1,4 @@
-add_llvm_loadable_module( PrintDbgInfo
+add_llvm_library(PrintDbgInfo MODULE
   PrintDbgInfo.cpp
 
   PLUGIN_TOOL

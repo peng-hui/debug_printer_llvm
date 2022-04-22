@@ -18,6 +18,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include <bits/stdc++.h>
 // #include "llvm/IR/DebugInfoMetadata.h"
 // #include "llvm/Support/type_traits.h"
 
@@ -25,33 +28,44 @@ using namespace llvm;
 
 namespace {
   
-  struct PrintDbgInfo : public FunctionPass {
+  struct PrintDbgInfo : public ModulePass{
     static char ID; // Pass identification, replacement for typeid
-    PrintDbgInfo() : FunctionPass(ID) {}
+    PrintDbgInfo() : ModulePass(ID) {}
 
-    virtual bool runOnFunction(Function &F) {
-	if (F.isDeclaration())
-		     return false;
-        for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-            const DILocation *DIL = I->getDebugLoc();
-            if (!DIL)
-                continue;
-            errs() << DIL->getFilename()<< " ==  " << DIL->getLine() <<"\n";
-        }
+    virtual bool runOnModule(Module &M) {
+        /* Gather all built-in functions
+     --------------------- */
+    const TargetLibraryInfo *TLI;
+    LibFunc inbuilt_func;
+    std::set<StringRef> builtins;
+    for (auto &F : M)
+        if (TLI->getLibFunc(F, inbuilt_func))
+            builtins.insert(F.getFunction().getName());
 
-        for (BasicBlock &BB : F) {
-            for (Instruction &I : BB) {
-                const DILocation *DIL = I.getDebugLoc();
-                if (!DIL)
-                    continue;
-                errs() << DIL->getFilename()<< " --  " << DIL->getLine() <<"\n";
+      Function *t;
+      for (auto &F : M){       
+      for (BasicBlock &BB : F) {
+          /// errs() << "hello world???\n" ;
+          for (Instruction &I: BB) {
+            if (isa<CallInst>(I)) {
+              t = cast<CallInst>(I).getCalledFunction();
+              if (t)  {
+                StringRef name = t->getName();
+                if (builtins.count(name)>0) { // not a func
+                  errs() << name.str()  << "\n";
+                }
+              }
             }
+         }
         }
-        return false;
+      }
+
+      return false;
     }
 
     // We don't modify the program, so we preserve all analyses
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+
       AU.setPreservesAll();
     }
   };
@@ -59,4 +73,4 @@ namespace {
 
 char PrintDbgInfo::ID = 0;
 static RegisterPass<PrintDbgInfo>
-Y("printDbgInfo", "print lines of instructions");
+Y("PrintDbgInfo", "print lines of instructions");
